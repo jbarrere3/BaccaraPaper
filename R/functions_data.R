@@ -181,3 +181,36 @@ get_chelsa_map_per_plot <- function(chelsa_files, plot_coord){
   return(out)
   
 }
+
+
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+## -- FUNCTIONS FOR RMARKDOWN ----
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+#' Function to knit the rmarkdown doocument
+#' @param rmd_file Name including path of the rmarkdown document to knit
+#' @param fig_files List of the figures that should be updated in the document
+#' @return the name of the pdf file generated
+knit_rmd <- function(rmd_file, fig_files){
+  # Convert rmd file content in a character vector
+  rmd_character <- readLines(con = rmd_file)
+  
+  # Count the presence of the figures in the rmd file
+  k = 0
+  for(i in 1:length(fig_files)) k = k + length(grep(fig_files[i], rmd_character))
+  
+  # Name of the output file
+  file.out <- gsub("Rmd", "pdf", rmd_file)
+  
+  # If some of the figures are used in the rmd file, then knit it
+  if(k > 0) rmarkdown::render(rmd_file, output_file = file.out, quiet = TRUE)
+  
+  # Return the pdf file 
+  return(file.out)
+  
+}

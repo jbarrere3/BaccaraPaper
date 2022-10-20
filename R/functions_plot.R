@@ -445,3 +445,37 @@ plot_browsingproba_sep <- function(df_br, map_per_plot, browsing_models, file.in
 
 
 
+
+
+#' Function to plot two climatic variables together
+#' @param df_gr data set to fit growth models
+#' @param map_per_plot mean annual precipitation per plot
+#' @param var.1 climatic variable to plot ("map", "Tmean" or "Tm_hiv)
+#' @param var.2 climatic variable to plot ("map", "Tmean" or "Tm_hiv)
+#' @param file.in name (including path) of the file to save
+plot_climatic_var <- function(df_gr, map_per_plot, var.1, var.2, file.in){
+  
+  # Create directory if needed
+  create_dir_if_needed(file.in)
+  
+  # Make the plot
+  plot.out <- map_per_plot %>%
+    left_join((df_gr %>% 
+                 dplyr::select("Site", "Plot", "Subplot", "Tmean", "Tm_hiv") %>%
+                 distinct()), 
+              by = c("Site", "Plot", "Subplot")) %>%
+    dplyr::select("Site", "var.1" = var.1, "var.2" = var.2) %>%
+    ggplot(aes(x = var.1, y = var.2, color = Site)) + 
+    geom_point() + 
+    xlab(var.1) + ylab(var.2) +
+    theme_bw()
+  
+  # Save the plot
+  ggsave(file.in, plot = plot.out, width = 12, height = 8, units = "cm", dpi = 600)
+  
+  # Return plot
+  return(file.in)
+}
+
+
+
