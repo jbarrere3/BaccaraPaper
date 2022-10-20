@@ -61,7 +61,7 @@ list(
   tar_target(fig_browsing_sep, plot_browsingproba_sep(
     df_br, map_per_plot, browsing_models, "fig/browsing_sep.pdf"), format = "file"), 
   
-  # - Fit and plot models for browsing and growth without Swedish site
+  # - Fit and plot models for browsing without Swedish site
   # --- Model fit
   tar_target(browsing_models_noG, fit_browsing(subset(df_br, Site != "Gallivare"), map_per_plot)),
   # --- Figure with one model including both map and temperature
@@ -71,12 +71,19 @@ list(
   tar_target(fig_browsing_sep_noG, plot_browsingproba_sep(
     subset(df_br, Site != "Gallivare"), map_per_plot, browsing_models_noG, "fig/browsing_sep_noG.pdf"), format = "file"), 
   
-  # - Fit and plot models for browsing and growth with Swedish site and winter temperature instead of mean
+  # - Fit and plot models for browsing with Swedish site and winter temperature instead of mean
   # --- Model fit
   tar_target(browsing_models_hiv, fit_browsing_hiv(df_br, map_per_plot)),
   # --- Figure with one model including both map and temperature
   tar_target(fig_browsing_hiv, plot_browsingproba_hiv(
     df_br, map_per_plot, browsing_models_hiv, "fig/browsing_hiv.pdf"), format = "file"), 
+  
+  # - Fit and plot model for growth without Swedish site
+  # --- Model fit
+  tar_target(growth_models_noG, fit_growth(subset(df_gr, Site != "Gallivare"), map_per_plot)), 
+  # --- Figure with one model including both map and temperature
+  tar_target(fig_growth_noG, plot_growth_ms(
+    subset(df_gr, Site != "Gallivare"), map_per_plot, growth_models_noG, "fig/growth_noG.pdf"), format = "file"),
   
   # - Plot climatic variables
   tar_target(fig_tmean_vs_map, plot_climatic_var(df_gr, map_per_plot, "Tmean", "map", "fig/tmean_vs_map.pdf")),
