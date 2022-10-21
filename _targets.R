@@ -89,6 +89,12 @@ list(
   tar_target(fig_growth_noG, plot_growth_ms(
     subset(df_gr, Site != "Gallivare"), map_per_plot, growth_models_noG, "fig/growth_noG.pdf"), format = "file"),
   
+  # - Fit and plot model for growth with Swedish site
+  # --- Model fit
+  tar_target(growth_models, fit_growth(df_gr, map_per_plot)), 
+  # --- Figure with one model including both map and temperature
+  tar_target(fig_growth, plot_growth_ms(df_gr, map_per_plot, growth_models_noG, "fig/growth.pdf"), format = "file"),
+  
   # - Plot climatic variables
   tar_target(fig_tmean_vs_map, plot_climatic_var(df_gr, map_per_plot, "Tmean", "map", "fig/tmean_vs_map.pdf")),
   tar_target(fig_tmean_vs_thiv, plot_climatic_var(df_gr, map_per_plot, "Tmean", "Tm_hiv", "fig/tmean_vs_thiv.pdf")),
