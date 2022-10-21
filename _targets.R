@@ -51,6 +51,10 @@ list(
   tar_target(chelsa_files, download_CHELSA(bioclim = 12, path = "data/CHELSA"), format = "file"), 
   tar_target(map_per_plot, get_chelsa_map_per_plot(chelsa_files, plot_coord)), 
   
+  # Get ungulate mass density index (umdi) for each plot
+  tar_target(ungulate_files, list.files(path = "data/ungulates", full.names = TRUE), format = "file"),
+  tar_target(umdi_per_plot, get_umdi_per_plot(plot_coord, ungulate_files)),
+  
   # - Fit and plot models for browsing and growth with Swedish site
   # --- Model fit
   tar_target(browsing_models, fit_browsing(df_br, map_per_plot)),

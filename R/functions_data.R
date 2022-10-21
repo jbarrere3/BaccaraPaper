@@ -113,6 +113,66 @@ format_growth <- function(bdd){
 
 
 
+#' Function to calculate an index of ungulate mass density (umdi) for each plot coordinate
+#' @param plot_coord Coordinates of each plot
+#' @param ungulate_files list of the files contained in the data/ungulates folder
+get_umdi_per_plot <- function(plot_coord, ungulate_files){
+  
+  # Ungulate body mass from https://naturalis.github.io/trait-organismal-ungulates/data/
+  bodymass <- fread(ungulate_files[grep("csv", ungulate_files)]) %>%
+    mutate(species = paste(Genus, Species, sep = " ")) %>%
+    filter(species %in% c("Cervus elaphus", "Alces alces", "Rupicapra rupicapra", "Capreolus capreolus", 
+                          "Capra ibex", "Dama dama", "Ovis aries")) %>%
+    left_join(data.frame(species = c("Cervus elaphus", "Alces alces", "Rupicapra rupicapra", "Capreolus capreolus", 
+                                     "Capra ibex", "Dama dama", "Ovis aries"), 
+                         name = c("RedDeer", "Moose", "NorthernChamois", "RoeDeer", "AlpineIbex", "FallowDeer", "Mouflon")), 
+              by = "species") %>%
+    mutate(bodymass_kg = as.numeric(X5.1_AdultBodyMass_g)/1000) %>%
+    dplyr::select(name, bodymass_kg)
+  
+  # Restrict ungulate_files to raster files
+  ungulate_rast_files <- ungulate_files[grep("tif", ungulate_files)]
+  
+  # Vector containing the name of each ungulate species
+  ungulate_species <- gsub("\\_.+", "", gsub(".+10km\\_", "", ungulate_rast_files))
+  ungulate_species <- gsub("Red", "RedDeer", ungulate_species)
+  ungulate_species <- gsub("Roe", "RoeDeer", ungulate_species)
+  ungulate_species <- gsub("Fd", "FallowDeer", ungulate_species)
+  
+  # Initialize output data set
+  out <- plot_coord
+  
+  # Loop on all ungulate species
+  for(i in 1:length(ungulate_species)){
+    
+    # Raster for ungulate species i
+    rast.i <- project(rast(ungulate_rast_files[i]), y = "epsg:4326")
+    
+    # Extract raster value for each plot
+    out$ungulate.i <- as.numeric(terra::extract(rast.i, cbind(out$X, out$Y))[, 1])
+    
+    # Replace NA by 0
+    out <- out %>% mutate(ungulate.i = ifelse(is.na(ungulate.i), 0, ungulate.i))
+    
+    # Rename newly created column with ungulate species name
+    colnames(out)[dim(out)[2]] <- ungulate_species[i]
+    
+  }
+  
+  # calculate ungulate bodymass density index
+  out <- out %>%
+    gather(key = "name", value = "density", bodymass$name) %>%
+    left_join(bodymass, by = "name") %>%
+    mutate(bodymass_kg.km2 = bodymass_kg*density) %>%
+    group_by(Site, Plot, Subplot) %>%
+    summarize(umdi = sum(bodymass_kg.km2, na.rm = TRUE))
+  
+  # Return output
+  return(out)
+  
+}
+
+
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ## -- FUNCTIONS FOR CLIMATE DATA ----
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
