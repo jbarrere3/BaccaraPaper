@@ -186,6 +186,72 @@ predict.mbr <- function(model, model.type = "all", data){
 }
 
 
+#' Function to apply different models to predict the effect of climate on browsing probability
+#' @param df_br Dataset formatted for the browsing model
+#' @param map_per_plot precipitation per plot
+#' @param umdi_per_plot ungulate mass density index per plot
+fit_browsing_hiv_umdi <- function(df_br, map_per_plot, umdi_per_plot){
+  # Vector of species present in the dataset
+  sp <- unique(df_br$Species)
+  
+  # Add precipitation to the dataset
+  df_br <- df_br %>%
+    left_join(map_per_plot, by = c("Site", "Plot", "Subplot")) %>%
+    left_join(umdi_per_plot, by = c("Site", "Plot", "Subplot"))
+  
+  # Initialize table of the best model
+  table.out <- data.frame(
+    Model = paste0("MBr", c(1:6)), 
+    Formulation = c("T + H + H*T + UMDI", "Pr + H + H*Pr + UMDI", 
+                    "Pr + H*Pr + T + H*T + H + UMDI", "T + H + H*T", 
+                    "Pr + H + H*Pr", "Pr + H*Pr + T + H*T + H")
+  )
+  
+  # Initialize final list containing the models
+  list.out <- list()
+  
+  # Loop on all species
+  for(i in 1:length(sp)){
+    
+    # Initialize model list for species i
+    model.list <- list()
+    
+    # Model with temperature
+    model.list$mbr1 <- glmer(B ~ scale(Tm_hiv)*scale(HT) + scale(umdi) + (1|Site/Z.Classe),
+                             family = 'binomial', data =subset(df_br, Species == sp[i]))
+    
+    # Model with precipitation
+    model.list$mbr2 <- glmer(B ~ scale(map)*scale(HT) + scale(umdi) + (1|Site/Z.Classe),
+                             family = 'binomial', data =subset(df_br, Species == sp[i]))
+    
+    # Model with precipitation
+    model.list$mbr3 <- glmer(B ~ scale(Tm_hiv)*scale(HT) + scale(map)*scale(HT) + scale(umdi) + (1|Site/Z.Classe),
+                             family = 'binomial', data =subset(df_br, Species == sp[i]))
+    
+    # Model with temperature and no ungulate index
+    model.list$mbr4 <- glmer(B ~ scale(Tm_hiv)*scale(HT) + (1|Site/Z.Classe),
+                             family = 'binomial', data =subset(df_br, Species == sp[i]))
+    
+    # Model with precipitation and no ungulate index
+    model.list$mbr5 <- glmer(B ~ scale(map)*scale(HT) + (1|Site/Z.Classe),
+                             family = 'binomial', data =subset(df_br, Species == sp[i]))
+    
+    # Model with precipitation and no ungulate index
+    model.list$mbr6 <- glmer(B ~ scale(Tm_hiv)*scale(HT) + scale(map)*scale(HT) + (1|Site/Z.Classe),
+                             family = 'binomial', data =subset(df_br, Species == sp[i]))
+    
+    # Add to the model list
+    eval(parse(text = paste0("list.out$", sp[i], " <- model.list")))
+    
+    # Add AIC to the final table
+    eval(parse(text = paste0("table.out$", sp[i], "_AIC <- as.numeric(unlist(lapply(model.list, AIC)))")))
+    eval(parse(text = paste0("table.out$", sp[i], "_deltaAIC <- table.out$", sp[i], "_AIC - min(table.out$", sp[i], "_AIC)")))
+  }
+  
+  # Final output
+  out <- list(table.out, list.out)
+  return(out)
+}
 
 #' Function to compute prediction of model 6 from range of parameters
 #' @param model model fit

@@ -274,3 +274,114 @@ knit_rmd <- function(rmd_file, fig_files){
   return(file.out)
   
 }
+
+
+#' Function to format the model outputs for the browsing model
+#' @param browsing_models Fitted models for browsing
+#' @param index.name Name of the index used for ungulate pressure
+format_browsing_models <- function(browsing_models, index.name){
+  
+  # Species included in the model
+  species.in <- names(browsing_models[[2]])
+  
+  # Convert species abbreviation in correct name
+  species.name.in <- (data.frame(sp = species.in) %>%
+                        left_join(data.frame(sp = c("ABAL", "ACPS", "FASY", "PIAB"), 
+                                             species = c("A. alba", "A. pseudoplatanus", "F. sylvatica", "P. abies")), 
+                                  by = "sp"))$species
+  
+  # Loop on all species
+  for(i in 1:length(species.in)){
+    # Results with ungulate index
+    data.addvar.i = data.frame(var = c("Int", "T", "Ht", "P", index.name, "T:Ht", "P:Ht"), 
+                               Est.1 = round(summary(browsing_models[[2]][[i]][[3]])$coefficients[, 1], digits = 2), 
+                               Est.sd.1 = round(summary(browsing_models[[2]][[i]][[3]])$coefficients[, 2], digits = 2), 
+                               p.1 = scales::pvalue(summary(browsing_models[[2]][[i]][[3]])$coefficients[, 4], accuracy = 0.01), 
+                               VIF.1 = c("", as.character(round(vif.mer(browsing_models[[2]][[i]][[3]]), digits = 1))))
+    rownames(data.addvar.i) <- NULL
+    # Results without ungulate index
+    data.novar.i = data.frame(var = c("Int", "T", "Ht", "P", "T:Ht", "P:Ht"), 
+                              Est.2 = round(summary(browsing_models[[2]][[i]][[6]])$coefficients[, 1], digits = 2), 
+                              Est.sd.2 = round(summary(browsing_models[[2]][[i]][[6]])$coefficients[, 2], digits = 2), 
+                              p.2 = scales::pvalue(summary(browsing_models[[2]][[i]][[6]])$coefficients[, 4], accuracy = 0.01), 
+                              VIF.2 = c("", as.character(round(vif.mer(browsing_models[[2]][[i]][[6]]), digits = 1))))
+    rownames(data.novar.i) <- NULL
+    
+    # Merge the two dataset in a matrix
+    matrix.i <- as.matrix(left_join(data.addvar.i, data.novar.i, by = "var"))
+    matrix.i[is.na(matrix.i)] <- ""
+    
+    # Arrange the final table for species i
+    data.i <- data.frame(
+      col1 = c("Var", "",  "", matrix.i[, 1]), 
+      col2 = c("Est. (sd)", species.name.in[i], paste0("Model with ", index.name), paste0(matrix.i[, 2], " (", matrix.i[, 3], ")")), 
+      col3 = c("p value", "", paste0("(AIC=", round(AIC(browsing_models[[2]][[i]][[3]]), digits = 0), ")"), matrix.i[, 4]), 
+      col4 = c("VIF", "", "", matrix.i[, 5]), 
+      col5 = "",
+      col6 = c("Est. (sd)", "", paste0("Model without ", index.name), paste0(matrix.i[, 6], " (", matrix.i[, 7], ")")), 
+      col7= c("p value", "", paste0("(AIC=", round(AIC(browsing_models[[2]][[i]][[6]]), digits = 0), ")"), matrix.i[, 8]), 
+      col8 = c("VIF", "", "", matrix.i[, 9])
+    )
+    
+    # Add to the final table
+    if(i == 1) out <- data.i
+    else out <- rbind(out, matrix("", nrow = 1, ncol = 8, dimnames = list(NULL, colnames(data.i))), data.i[-1, ])
+    
+  }
+  
+  # Remove colnames of the output
+  colnames(out) = NULL
+  
+  # Return output
+  return(out)
+}
+
+
+#' Function to format the model outputs for the browsing model
+#' @param growth_models Fitted models for growth
+format_growth_models <- function(growth_models){
+  
+  # Species included in the model
+  species.in <- names(growth_models[[2]])
+  
+  # Convert species abbreviation in correct name
+  species.name.in <- (data.frame(sp = species.in) %>%
+                        left_join(data.frame(sp = c("ABAL", "ACPS", "FASY", "PIAB"), 
+                                             species = c("A. alba", "A. pseudoplatanus", "F. sylvatica", "P. abies")), 
+                                  by = "sp"))$species
+  
+  # Loop on all species
+  for(i in 1:length(species.in)){
+    # Results with ungulate index
+    data.i = data.frame(var = c("Int", "Ht", "T", "Br", "P", "T:Br", "P:Br"), 
+                        Est. = round(summary(growth_models[[2]][[i]][[3]])$coefficients[, 1], digits = 2), 
+                        Est.sd = round(summary(growth_models[[2]][[i]][[3]])$coefficients[, 2], digits = 2), 
+                        p. = c("", scales::pvalue(car::Anova(growth_models[[2]][[i]][[3]])[, 3], accuracy = 0.01)), 
+                        VIF = c("", as.character(round(vif.mer(growth_models[[2]][[i]][[3]]), digits = 1))))
+    rownames(data.i) <- NULL
+    
+    # Merge the dataset in a matrix
+    matrix.i <- as.matrix(data.i)
+    matrix.i[is.na(matrix.i)] <- ""
+    
+    # Arrange the final table for species i
+    data.i <- data.frame(
+      col1 = c("Var", "",  matrix.i[, 1]), 
+      col2 = c("Est. (sd)", species.name.in[i], paste0(matrix.i[, 2], " (", matrix.i[, 3], ")")), 
+      col3 = c("p value", paste0("(AIC=", round(AIC(growth_models[[2]][[i]][[3]]), digits = 0), ")"), matrix.i[, 4]), 
+      col4 = c("VIF", "", matrix.i[, 5]))
+    
+    # Add to the final table
+    if(i == 1) out <- data.i
+    else out <- rbind(out, matrix("", nrow = 1, ncol = 4, dimnames = list(NULL, colnames(data.i))), data.i[-1, ])
+    
+  }
+  
+  # Remove colnames of the output
+  colnames(out) = NULL
+  
+  # Return output
+  return(out)
+}
+
+

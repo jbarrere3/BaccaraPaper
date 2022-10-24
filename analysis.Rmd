@@ -16,89 +16,87 @@ Last compilation : \today
 
 \vspace{20pt}
 
-Julien Barrere
+\begin{center}
+
+Julien BARRERE
+
+\end{center}
 
 \vspace{20pt}
 
 
 All the analyses presented here are available at the following [git](https://github.com/jbarrere3/BaccaraPaper) repository. 
 
-\newpage
 
 # Effect of climate on browsing probability
 
-## Original model and results 
-
-In the original manuscript, browsing probability ($p_{br}$) was predicted with the following model: 
-
-$logit(p_{br}) = \alpha_1 + \alpha_2*T_{winter} + \alpha_3*Ht + \alpha_4*T_{winter}*Ht + \theta_{S/Z} + \epsilon$
-
-Where $T_{winter}$ is the mean winter temperature, $\alpha$ are parameters to estimate, $Ht$ is seedling height, and $\theta_{S/Z}$ is a random intercept with elevation (Z) nested in site (S). 
-
-We found that $T_{winter}$ had a negative effect on browsing probability for all species but Norway spruce. 
-
-
-## New analysis 
-
-This new analysis arise from the idea of including mean annual precipitation ($map$) extracted from CHELSA in the model predicting browsing probability, as this variable can in theory be de-correlated from temperature (see fig below). 
-
-
-
-```{r fig_tmeanvsmap, echo=FALSE, out.width = '50%'}
-knitr::include_graphics("fig/tmean_vs_map.pdf")
-```
-
-
-
-We also replaced winter temperature by mean annual temperature ($T_{mean}$) to simplify the analyses. We fitted a first model where both of these variables were included : 
-
-$logit(p_{br}) = \alpha_1 + \alpha_2*T_{mean} + \alpha_3*Ht + \alpha_4*T_{mean}*Ht + \alpha_5*map + \alpha_4*map*Ht + \theta_{S/Z} + \epsilon$
-
-\newpage
-
-```{r figBrowsing, echo=FALSE, fig.cap="Effect of height and (a) temperature or (b) precipitation on browsing probability, when all climatic variables are included in a single model. (c) estimate and confidence interval of the effect of each predictor.", out.width = '90%'}
-knitr::include_graphics("fig/browsing.pdf")
-```
-
-We found a result different from the original result, with temperature having no effect on browsing probability, except for maple. Since the effect of temperature, though non-significant, remains negative for all species but spruce, this could be due to a loss of statistical power due to the inclusion of two additional predictors. 
-
-
-\newpage
-
-To test this hypothesis, we fitted two separate models. One for the effect of $T_{mean}$; 
-
-$logit(p_{br}) = \alpha_1 + \alpha_2*T_{mean} + \alpha_3*Ht + \alpha_4*T_{mean}*Ht + \theta_{S/Z} + \epsilon$
-
-And one for the effect of $map$: 
-
-$logit(p_{br}) = \alpha_1 + \alpha_2*map + \alpha_3*Ht + \alpha_4*map*Ht + \theta_{S/Z} + \epsilon$
-
-The figure below shows the results of these two models: 
-
-```{r figBrowsing_sep, echo=FALSE, fig.cap="Effect of height and (a) temperature or (b) precipitation on browsing probability, when climatic variables are included in two separate models. (c) estimate and confidence interval of the effect of each predictor.", out.width = '90%'}
-knitr::include_graphics("fig/browsing_sep.pdf")
-```
-
-
-Surprisingly, the effect of temperature remains non-significant for all species but maple. The alternative explanation would be that this difference is due to the replacement of $T_{winter}$ by $T_{mean}$. 
-
-\newpage
-
-When looking at the correlation between $T_{winter}$ and $T_{mean}$, we can see that both variables are highly correlated, but not perfectly. Especially for the Bavarian site (see below): 
-
-
-```{r fig_tmeanvsthiv, echo=FALSE, out.width = '50%'}
-knitr::include_graphics("fig/tmean_vs_thiv.pdf")
-```
-
-Therefore, we chose to test again a model with the two climatic variables, but this time with $T_{winter}$ instead of $T_{mean}$: 
+The effect of climate on browsing probability ($p_{br}$) is fitted with the following model: 
 
 $logit(p_{br}) = \alpha_1 + \alpha_2*T_{winter} + \alpha_3*Ht + \alpha_4*T_{winter}*Ht + \alpha_5*map + \alpha_4*map*Ht + \theta_{S/Z} + \epsilon$
 
+Where $T_{winter}$ is the mean winter temperature, $map$ is the mean annual precipitation, $\alpha$ are parameters to estimate, $Ht$ is seedling height, and $\theta_{S/Z}$ is a random intercept with elevation (Z) nested in site (S). 
+
+Before fitting the model, we verified that the two climatic variables were not too correlated: 
+
+```{r fig_thivvsmap, echo=FALSE, out.width = '50%'}
+knitr::include_graphics("fig/map_vs_thiv.pdf")
+```
+
+
 \newpage
+
+We found that $T_{winter}$ had a negative effect on browsing probability for all species but Norway spruce, while precipitation affected browsing probability for both maple and spruce:  
+
 
 ```{r figBrowsing_hiv, echo=FALSE, fig.cap="Effect of height and (a) winter temperature or (b) precipitation on browsing probability, when all climatic variables are included in a single model. (c) estimate and confidence interval of the effect of each predictor.", out.width = '90%'}
 knitr::include_graphics("fig/browsing_hiv.pdf")
 ```
 
-This time, the result are consistent with the original model: temperature has a negative effect on browsing probability for all species but Norway spruce. 
+We also fitted a second model including ungulate mass density index (umdi) as an additional explanatory variable: 
+
+$logit(p_{br}) = \alpha_1 + \alpha_2*T_{winter} + \alpha_3*Ht + \alpha_4*T_{winter}*Ht + \alpha_5*map + \alpha_4*map*Ht + \alpha_5*umdi + \theta_{S/Z} + \epsilon$
+
+The umdi was calculated by summing in each site the density of each ungulate species (predicted by [ENETWILD et al. 2022](https://zenodo.org/record/7214870)) weighted by their body mass (retrieved from [naturalis database](https://naturalis.github.io/trait-organismal-ungulates/data/)). 
+
+
+The parameters estimate, p-values, and VIF (to check for collinearities) of each model are shown in the table below: 
+
+\newpage
+
+
+```{r resultsBrowsing}
+library(targets)
+tar_load(browsing_models_hiv_umdi)
+source("R/functions_data.R")
+format_browsing_models(browsing_models_hiv_umdi, index.name = "umdi")
+```
+
+
+\newpage
+
+# Effect of climate and browsing on seedling growth
+
+We fitted the following model to study the effect of browsing ($Br$) and climate on seedling last shoot length (LSL)
+
+$log(LSL) = \alpha_1 + \alpha_2*Ht + \alpha_3*Br \alpha_4*T_{mean} + \alpha_5*T_{mean}*Br + \alpha_6*map + \alpha_7*map*map + \theta_{S/Z} + \epsilon$
+
+Where $T_{mean}$ is the mean annual temperature. 
+
+
+```{r figGrowth, echo=FALSE, fig.cap="Effect of height, browsing and (a) temperature or (b) precipitation on seedling growth. (c) estimate and confidence interval of the effect of each predictor.", out.width = '90%'}
+knitr::include_graphics("fig/growth_noG.pdf")
+```
+
+
+\newpage
+
+The parameters estimate, p-values, and VIF (to check for collinearities) of each model are shown in the table below: 
+
+
+```{r resultsGrowth}
+library(targets)
+tar_load(growth_models_noG)
+source("R/functions_data.R")
+format_growth_models(growth_models_noG)
+```
+

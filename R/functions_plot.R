@@ -124,7 +124,8 @@ plot_browsingproba <- function(df_br, map_per_plot, browsing_models, file.in){
     left_join(data.frame(species = c("ABAL", "ACPS", "FASY", "PIAB"), 
                          sp = c("A. alba", "A. pseudoplatanus", "F. sylvatica", "P. abies")), 
               by = "species") %>%
-    mutate(param = factor(param, levels = c("P:Ht", "P", "T:Ht", "T", "Ht", "Int."))) %>%
+    filter(param != "Int.") %>%
+    mutate(param = factor(param, levels = c("P:Ht", "P", "T:Ht", "T", "Ht"))) %>%
     mutate(signif = ifelse((low > 0 | high < 0), "Yes", "No")) %>%
     ggplot(aes(x = param, y = coef, color = signif)) + 
     geom_point() +
@@ -260,7 +261,8 @@ plot_browsingproba_hiv <- function(df_br, map_per_plot, browsing_models, file.in
     left_join(data.frame(species = c("ABAL", "ACPS", "FASY", "PIAB"), 
                          sp = c("A. alba", "A. pseudoplatanus", "F. sylvatica", "P. abies")), 
               by = "species") %>%
-    mutate(param = factor(param, levels = c("P:Ht", "P", "T:Ht", "T", "Ht", "Int."))) %>%
+    filter(param != "Int.") %>%
+    mutate(param = factor(param, levels = c("P:Ht", "P", "T:Ht", "T", "Ht"))) %>%
     mutate(signif = ifelse((low > 0 | high < 0), "Yes", "No")) %>%
     ggplot(aes(x = param, y = coef, color = signif)) + 
     geom_point() +
