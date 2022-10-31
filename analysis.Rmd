@@ -49,7 +49,7 @@ We found that $T_{winter}$ had a negative effect on browsing probability for all
 
 
 ```{r figBrowsing_hiv, echo=FALSE, fig.cap="Effect of height and (a) winter temperature or (b) precipitation on browsing probability, when all climatic variables are included in a single model. (c) estimate and confidence interval of the effect of each predictor.", out.width = '90%'}
-knitr::include_graphics("fig/browsing_hiv.pdf")
+knitr::include_graphics("fig/browsing_hiv_noG.pdf")
 ```
 
 We also fitted a second model including ungulate mass density index (umdi) as an additional explanatory variable: 

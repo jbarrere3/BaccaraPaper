@@ -149,7 +149,7 @@ list(
   
   # - Knit the Rmarkdown document presenting the analyses
   tar_target(rmd_file, "analysis.Rmd", format = "file"), 
-  tar_target(fig_files, c(fig_map_vs_thiv, fig_browsing_hiv, fig_growth_noG), format = "file"), 
+  tar_target(fig_files, c(fig_map_vs_thiv, fig_browsing_hiv_noG, fig_growth_noG), format = "file"), 
   tar_target(knitted_pdf, knit_rmd(rmd_file, fig_files), format = "file")
   
 )
