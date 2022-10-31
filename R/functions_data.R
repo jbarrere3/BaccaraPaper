@@ -161,6 +161,14 @@ get_umdi_per_plot <- function(plot_coord, ungulate_files){
   
   # calculate ungulate bodymass density index
   out <- out %>%
+    # Correct by real presence / absence data
+    mutate(AlpineIbex = ifelse(Site %in% c("Vercors", "Belledone"), AlpineIbex, 0), 
+           FallowDeer = 0, 
+           Moose = ifelse(Site == "Gallivare", Moose, 0), 
+           Mouflon = ifelse(Site %in% c("Vercors", "Belledone", "Chartreuse"), Mouflon, 0), 
+           NorthernChamois = ifelse(Site %in% c("Vercors", "Belledone", "Chartreuse"), NorthernChamois, 0), 
+           RedDeer = ifelse(Site == "Gallivare", 0, RedDeer), 
+           RoeDeer = ifelse(Site == "Freiburg", 0, RoeDeer)) %>%
     gather(key = "name", value = "density", bodymass$name) %>%
     left_join(bodymass, by = "name") %>%
     mutate(bodymass_kg.km2 = bodymass_kg*density) %>%
