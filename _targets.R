@@ -110,10 +110,14 @@ list(
   # - With Swedish site
   tar_target(fig_browsing_hiv, plot_browsingproba_hiv(
     df_br, map_per_plot, browsing_models_hiv, "fig/browsing_hiv.pdf"), format = "file"), 
+  tar_target(fig_browsing_hiv_jpg, plot_browsingproba_hiv(
+    df_br, map_per_plot, browsing_models_hiv, "fig/browsing_hiv.jpg"), format = "file"), 
   
   # - Without Swedish site
   tar_target(fig_browsing_hiv_noG, plot_browsingproba_hiv(
     subset(df_gr, Site != "Gallivare"), map_per_plot, browsing_models_hiv_noG, "fig/browsing_hiv_noG.pdf"), format = "file"), 
+  tar_target(fig_browsing_hiv_noG_jpg, plot_browsingproba_hiv(
+    subset(df_gr, Site != "Gallivare"), map_per_plot, browsing_models_hiv_noG, "fig/browsing_hiv_noG.jpg"), format = "file"), 
   
   
   
@@ -123,10 +127,13 @@ list(
   
   # - With Swedish site
   tar_target(fig_growth, plot_growth_ms(df_gr, map_per_plot, growth_models_noG, "fig/growth.pdf"), format = "file"),
+  tar_target(fig_growth_jpg, plot_growth_ms(df_gr, map_per_plot, growth_models_noG, "fig/growth.jpg"), format = "file"),
   
   # - Without Swedish site
   tar_target(fig_growth_noG, plot_growth_ms(
     subset(df_gr, Site != "Gallivare"), map_per_plot, growth_models_noG, "fig/growth_noG.pdf"), format = "file"),
+  tar_target(fig_growth_noG_jpg, plot_growth_ms(
+    subset(df_gr, Site != "Gallivare"), map_per_plot, growth_models_noG, "fig/growth_noG.jpg"), format = "file"),
   
   
   
@@ -136,8 +143,20 @@ list(
   
   # - Plot climatic variables
   tar_target(fig_tmean_vs_map, plot_climatic_var(df_gr, map_per_plot, "Tmean", "map", "fig/tmean_vs_map.pdf"), format = "file"),
+  tar_target(fig_tmean_vs_map_jpg, plot_climatic_var(df_gr, map_per_plot, "Tmean", "map", "fig/tmean_vs_map.jpg"), format = "file"),
   tar_target(fig_map_vs_thiv, plot_climatic_var(df_gr, map_per_plot, "map", "Tm_hiv", "fig/map_vs_thiv.pdf"), format = "file"),
+  tar_target(fig_map_vs_thiv_jpg, plot_climatic_var(df_gr, map_per_plot, "map", "Tm_hiv", "fig/map_vs_thiv.jpg"), format = "file"),
   tar_target(fig_tmean_vs_thiv, plot_climatic_var(df_gr, map_per_plot, "Tmean", "Tm_hiv", "fig/tmean_vs_thiv.pdf"), format = "file"),
+  
+  
+  
+  ##%%- - - - - - - - - - - - 
+  ## -- OTHER PLOTS - - - - -
+  ##%%- - - - - - - - - - - - 
+  
+  # - Plot ungulate density per plot and per feeding type
+  tar_target(fig_density_per_site, plot_density_per_site(plot_coord, ungulate_files, "fig/density_per_site.pdf"), format = "file"),
+  tar_target(fig_density_per_site_jpg, plot_density_per_site(plot_coord, ungulate_files, "fig/density_per_site.jpg"), format = "file"),
   
   
   
@@ -150,6 +169,26 @@ list(
   # - Knit the Rmarkdown document presenting the analyses
   tar_target(rmd_file, "analysis.Rmd", format = "file"), 
   tar_target(fig_files, c(fig_map_vs_thiv, fig_browsing_hiv_noG, fig_growth_noG), format = "file"), 
-  tar_target(knitted_pdf, knit_rmd(rmd_file, fig_files), format = "file")
+  tar_target(knitted_pdf, knit_rmd(rmd_file, fig_files), format = "file"),
+  
+  
+  
+  
+  
+  ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  ##' - EXPORT TABLES
+  ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  
+  # - Export the  browsing model statistics as csv files
+  tar_target(browsing_model_table_noG, write_on_disk(
+    format_browsing_models(browsing_models_hiv_umdi_noG, "umdi"), "table/browsing_noG.csv"), format = "file"), 
+  tar_target(browsing_model_table, write_on_disk(
+    format_browsing_models(browsing_models_hiv_umdi, "umdi"), "table/browsing.csv"), format = "file"), 
+  
+  # - Export the growth model statistics as csv files
+  tar_target(growth_model_table_noG, write_on_disk(
+    format_growth_models(growth_models_noG), "table/growth_noG.csv"), format = "file"), 
+  tar_target(growth_model_table, write_on_disk(
+    format_growth_models(growth_models), "table/growth.csv"), format = "file")
   
 )

@@ -141,12 +141,12 @@ plot_browsingproba <- function(df_br, map_per_plot, browsing_models, file.in){
           legend.position = "none")
   
   # Final plot
-  plot.out <- plot_grid(plot_grid(plot.temp, plot.map, plot.param, ncol = 1, align = "v", labels = c("(a)", "(b)", "(c)")), 
+  plot.out <- plot_grid(plot_grid(plot.temp, plot.param, ncol = 1, align = "v", labels = c("(a)", "(b)")), 
                         get_legend(plot.temp + theme(legend.position = "left", legend.title = element_blank())), 
                         nrow = 1, rel_widths = c(1, 0.3))
   
   # Save the plot
-  ggsave(file.in, plot = plot.out, width = 18, height = 15, units = "cm", dpi = 600)
+  ggsave(file.in, plot = plot.out, width = 18, height = 10, units = "cm", dpi = 600)
   
   # Return plot
   return(file.in)
@@ -278,12 +278,12 @@ plot_browsingproba_hiv <- function(df_br, map_per_plot, browsing_models, file.in
           legend.position = "none")
   
   # Final plot
-  plot.out <- plot_grid(plot_grid(plot.temp, plot.map, plot.param, ncol = 1, align = "v", labels = c("(a)", "(b)", "(c)")), 
+  plot.out <- plot_grid(plot_grid(plot.temp, plot.param, ncol = 1, align = "v", labels = c("(a)", "(b)")), 
                         get_legend(plot.temp + theme(legend.position = "left", legend.title = element_blank())), 
                         nrow = 1, rel_widths = c(1, 0.3))
   
   # Save the plot
-  ggsave(file.in, plot = plot.out, width = 18, height = 15, units = "cm", dpi = 600)
+  ggsave(file.in, plot = plot.out, width = 18, height = 10, units = "cm", dpi = 600)
   
   # Return plot
   return(file.in)
@@ -668,4 +668,102 @@ plot_growth_ms <- function(df_gr, map_per_plot, growth_models, file.in){
   return(file.in)
 }
 
+
+
+
+#' Function to plot the density of ungulate per site and feeding type
+#' @param plot_coord Coordinates of each plot
+#' @param ungulate_files list of the files contained in the data/ungulates folder
+#' @param file.in Name (including path) of the file to save
+plot_density_per_site <- function(plot_coord, ungulate_files, file.in){
+  
+  # Create directory if needed
+  create_dir_if_needed(file.in)
+  
+  # Ungulate body mass from https://naturalis.github.io/trait-organismal-ungulates/data/
+  bodymass <- fread(ungulate_files[grep("csv", ungulate_files)]) %>%
+    mutate(species = paste(Genus, Species, sep = " ")) %>%
+    filter(species %in% c("Cervus elaphus", "Alces alces", "Rupicapra rupicapra", "Capreolus capreolus", 
+                          "Capra ibex", "Dama dama", "Ovis aries")) %>%
+    left_join(data.frame(species = c("Cervus elaphus", "Alces alces", "Rupicapra rupicapra", "Capreolus capreolus", 
+                                     "Capra ibex", "Dama dama", "Ovis aries"), 
+                         name = c("RedDeer", "Moose", "NorthernChamois", "RoeDeer", "AlpineIbex", "FallowDeer", "Mouflon")), 
+              by = "species") %>%
+    mutate(bodymass_kg = as.numeric(X5.1_AdultBodyMass_g)/1000) %>%
+    dplyr::select(name, bodymass_kg)
+  
+  # Restrict ungulate_files to raster files
+  ungulate_rast_files <- ungulate_files[grep("tif", ungulate_files)]
+  
+  # Vector containing the name of each ungulate species
+  ungulate_species <- gsub("\\_.+", "", gsub(".+10km\\_", "", ungulate_rast_files))
+  ungulate_species <- gsub("Red", "RedDeer", ungulate_species)
+  ungulate_species <- gsub("Roe", "RoeDeer", ungulate_species)
+  ungulate_species <- gsub("Fd", "FallowDeer", ungulate_species)
+  
+  # Initialize output data set
+  out <- plot_coord
+  
+  # Loop on all ungulate species
+  for(i in 1:length(ungulate_species)){
+    
+    # Raster for ungulate species i
+    rast.i <- project(rast(ungulate_rast_files[i]), y = "epsg:4326")
+    
+    # Extract raster value for each plot
+    out$ungulate.i <- as.numeric(terra::extract(rast.i, cbind(out$X, out$Y))[, 1])
+    
+    # Replace NA by 0
+    out <- out %>% mutate(ungulate.i = ifelse(is.na(ungulate.i), 0, ungulate.i))
+    
+    # Rename newly created column with ungulate species name
+    colnames(out)[dim(out)[2]] <- ungulate_species[i]
+    
+  }
+  
+  # Final plot
+  plot.out <- out %>%
+    # Correct depending on actual presence
+    mutate(AlpineIbex = ifelse(Site %in% c("Vercors", "Belledone"), AlpineIbex, 0), 
+           FallowDeer = 0, 
+           Moose = ifelse(Site == "Gallivare", Moose, 0), 
+           Mouflon = ifelse(Site %in% c("Vercors", "Belledone", "Chartreuse"), Mouflon, 0), 
+           NorthernChamois = ifelse(Site %in% c("Vercors", "Belledone", "Chartreuse"), NorthernChamois, 0), 
+           RedDeer = ifelse(Site == "Gallivare", 0, RedDeer), 
+           RoeDeer = ifelse(Site == "Freiburg", 0, RoeDeer)) %>%
+    # Average density by site
+    dplyr::select("Site", ungulate_species) %>%
+    gather(key = "name", value = "density", ungulate_species) %>%
+    group_by(Site, name) %>% 
+    summarize(density = mean(density)) %>%
+    # Add bodymass
+    left_join(bodymass, by = "name") %>%
+    ungroup() %>%
+    # Add feeding type
+    mutate(feeding.type = case_when(name %in% c("FallowDeer", "AlpineIbex", "NorthernChamois", "RedDeer") ~ "IF", 
+                                    name %in% c("Moose", "RoeDeer") ~ "Browsers", 
+                                    name == "Mouflon" ~ "Grazers")) %>%
+    # Calculate the product mass*density by feeding typee and site
+    mutate(mass.density = density*bodymass_kg) %>%
+    group_by(Site, feeding.type) %>%
+    summarize(value_kg.km2 = sum(mass.density)) %>%
+    ungroup() %>% group_by(Site) %>%
+    mutate(value_percent = value_kg.km2/sum(value_kg.km2)*100) %>%
+    # Make the plot
+    ggplot(aes(x = Site, y = value_kg.km2, fill = feeding.type)) +
+    geom_bar(stat="identity", position = position_dodge(), color = "black", width = 0.50) + 
+    xlab("") + ylab("Ungulate density \n (kg.km2)") + 
+    coord_flip() + 
+    theme(panel.background = element_rect(fill = "white", color = "black"), 
+          panel.grid = element_blank(), 
+          legend.title = element_blank())
+  
+  # Save the plot
+  ggsave(file.in, plot = plot.out, width = 15, height = 8, units = "cm", dpi = 600)
+  
+  # Return plot
+  return(file.in)
+  
+  
+}
 
