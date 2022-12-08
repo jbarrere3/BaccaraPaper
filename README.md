@@ -1,6 +1,6 @@
-# DisturbancePaper
+# Baccara
 
-R script to reproduce the analyses of the paper *Climate is a driver of ungulate browsing intensity and of its effect on tree seedling growth* by JMarianne Bernard, Xavier Morin, Sonia Saïd, Vincent Boulanger, Elena Granda, Julien Barrere, Raquel Benavides, Hervé Jactel, Marco Heurich, Sonia G. Rabasa, Fernando Valladares, and Georges Kunstler. This script is based on initial analyses by Marianne Bernard and Georges Kunstler, later modified by Julien Barrere. 
+R script to reproduce the analyses of the paper *Climate is a driver of ungulate browsing intensity and of its effect on tree seedling growth* by Marianne Bernard, Xavier Morin, Sonia Saïd, Vincent Boulanger, Elena Granda, Julien Barrere, Raquel Benavides, Hervé Jactel, Marco Heurich, Sonia G. Rabasa, Fernando Valladares, and Georges Kunstler. This script is based on initial analyses by Marianne Bernard and Georges Kunstler, later modified by Julien Barrere. 
 
 Before running the script, some data are required. The list of files needed and the structure that the "data" folder must have is visible in lines 43 to 44  of the ```_targets.R``` script. These files can be obtained upon request to Julien BARRERE (julien.barrere@inrae.fr) or Georges Kunstler (georges.kunstler@inrae.fr). 
 
