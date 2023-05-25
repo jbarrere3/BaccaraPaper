@@ -21,7 +21,8 @@ library(targets)
 # Load functions
 lapply(grep("R$", list.files("R"), value = TRUE), function(x) source(file.path("R", x)))
 # install if needed and load packages
-packages.in <- c("dplyr", "ggplot2", "RCurl", "httr", "tidyr", "data.table", "lme4", "cowplot", "archive", "terra", "knitr", "car")
+packages.in <- c("dplyr", "ggplot2", "RCurl", "httr", "tidyr", "data.table", 
+                 "lme4", "cowplot", "archive", "terra", "knitr", "car")
 for(i in 1:length(packages.in)) if(!(packages.in[i] %in% rownames(installed.packages()))) install.packages(packages.in[i])
 # Targets options
 options(tidyverse.quiet = TRUE)
@@ -76,13 +77,16 @@ list(
   tar_target(browsing_models_hiv, fit_browsing_hiv(df_br, map_per_plot)),
   
   # - Browsing with index SUA and without Swedish site
-  tar_target(browsing_models_hiv_noG, fit_browsing_hiv(subset(df_br, Site != "Gallivare"), map_per_plot)),
+  tar_target(browsing_models_hiv_noG, fit_browsing_hiv(
+    subset(df_br, Site != "Gallivare"), map_per_plot)),
   
   # - Browsing with index umdi and with Swedish site
-  tar_target(browsing_models_hiv_umdi, fit_browsing_hiv_umdi(df_br, map_per_plot, umdi_per_plot)),
+  tar_target(browsing_models_hiv_umdi, fit_browsing_hiv_umdi(
+    df_br, map_per_plot, umdi_per_plot)),
   
   # - Browsing with index umdi and without Swedish site
-  tar_target(browsing_models_hiv_umdi_noG, fit_browsing_hiv_umdi(subset(df_br, Site != "Gallivare"), map_per_plot, umdi_per_plot)),
+  tar_target(browsing_models_hiv_umdi_noG, fit_browsing_hiv_umdi(
+    subset(df_br, Site != "Gallivare"), map_per_plot, umdi_per_plot)),
   
   
   ##%%- - - - - - - - - - - - 
@@ -115,9 +119,11 @@ list(
   
   # - Without Swedish site
   tar_target(fig_browsing_hiv_noG, plot_browsingproba_hiv(
-    subset(df_gr, Site != "Gallivare"), map_per_plot, browsing_models_hiv_noG, "fig/browsing_hiv_noG.pdf"), format = "file"), 
+    subset(df_gr, Site != "Gallivare"), map_per_plot, browsing_models_hiv_noG, 
+    "fig/browsing_hiv_noG.pdf"), format = "file"), 
   tar_target(fig_browsing_hiv_noG_jpg, plot_browsingproba_hiv(
-    subset(df_gr, Site != "Gallivare"), map_per_plot, browsing_models_hiv_noG, "fig/browsing_hiv_noG.jpg"), format = "file"), 
+    subset(df_gr, Site != "Gallivare"), map_per_plot, browsing_models_hiv_noG, 
+    "fig/browsing_hiv_noG.jpg"), format = "file"), 
   
   
   
@@ -126,14 +132,18 @@ list(
   ##%%- - - - - - - - - - - - 
   
   # - With Swedish site
-  tar_target(fig_growth, plot_growth_ms(df_gr, map_per_plot, growth_models_noG, "fig/growth.pdf"), format = "file"),
-  tar_target(fig_growth_jpg, plot_growth_ms(df_gr, map_per_plot, growth_models_noG, "fig/growth.jpg"), format = "file"),
+  tar_target(fig_growth, plot_growth_ms(df_gr, map_per_plot, growth_models_noG, 
+                                        "fig/growth.pdf"), format = "file"),
+  tar_target(fig_growth_jpg, plot_growth_ms(df_gr, map_per_plot, growth_models_noG, 
+                                            "fig/growth.jpg"), format = "file"),
   
   # - Without Swedish site
   tar_target(fig_growth_noG, plot_growth_ms(
-    subset(df_gr, Site != "Gallivare"), map_per_plot, growth_models_noG, "fig/growth_noG.pdf"), format = "file"),
+    subset(df_gr, Site != "Gallivare"), map_per_plot, growth_models_noG, 
+    "fig/growth_noG.pdf"), format = "file"),
   tar_target(fig_growth_noG_jpg, plot_growth_ms(
-    subset(df_gr, Site != "Gallivare"), map_per_plot, growth_models_noG, "fig/growth_noG.jpg"), format = "file"),
+    subset(df_gr, Site != "Gallivare"), map_per_plot, growth_models_noG, 
+    "fig/growth_noG.jpg"), format = "file"),
   
   
   
@@ -159,7 +169,11 @@ list(
   tar_target(fig_density_per_site_jpg, plot_density_per_site(plot_coord, ungulate_files, "fig/density_per_site.jpg"), format = "file"),
   
   
-  
+  # - Plot growth and browsing with an effect of elevation
+  tar_target(fig_gr_elev, plot_gr_elev(
+    subset(df_br, Site != "Gallivare"), "fig/elevation/growth.jpg"), format = "file"),
+  tar_target(fig_br_elev, plot_br_elev(
+    subset(df_gr, Site != "Gallivare"), "fig/elevation/browsing.jpg"), format = "file"),
   
   
   ##%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
