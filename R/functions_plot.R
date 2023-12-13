@@ -25,6 +25,7 @@ plot_gr_elev = function(df_gr, dir.in){
   
   # Name of the files to export
   file.fig.in = paste0(dir.in, "/fig_growth.jpg")
+  file.fig.resid.in = paste0(dir.in, "/fig_growth_residuals.jpg")
   file.table.in = paste0(dir.in, "/table_growth.csv")
   
   # Create directory if needed
@@ -45,10 +46,19 @@ plot_gr_elev = function(df_gr, dir.in){
            HT.scaled = predict(lm(scale(HT) ~ HT, data = df_gr), newdata = .))
   
   # Initialize the table with statistics 
-  table.stat = data.frame(col1 = "", col2 = "Estimate (se)", col3 = "p-value")
+  table.stat = data.frame(col1 = c("", "", "Int.", "Ht", "Z", "B", "Z:B"))
+  
+  # Initialize the list of residual plots
+  list.plot.residuals = list()
   
   # Loop on all species
   for(i in 1:length(sp)){
+    
+    # Identify species i
+    species.i = (data.frame(sp = c("ABAL", "ACPS", "FASY", "PIAB"), 
+                            species = c("A. alba", "A. pseudoplatanus", 
+                                        "F. sylvatica", "P. abies")) %>%
+                   filter(sp == sp[i]))$species
     
     # Initialize model list for species i
     model.i = lmer(log(LLS+1) ~ scale(HT) + scale(Z)*B + (1|Site/Z.Classe),
@@ -95,12 +105,33 @@ plot_gr_elev = function(df_gr, dir.in){
     
     # Complete the stat table 
     table.stat = table.stat %>%
-      rbind(data.frame(
-        col1 = c("", "", "Int.", "Ht", "Z", "B", "Z:B"), 
-        col2 = c("", sp[i], paste0(round(coef.est.i$coef, 2), " (", 
-                                   round(coef.est.i$se, 2), ")")), 
-        col3 = c("", "", "", scales::pvalue(coef.est.i$p[-1]))
-      ))
+      cbind(data.frame(
+        est = c(species.i, "est (sd)", paste0(round(coef.est.i$coef, 2), " (", 
+                                              round(coef.est.i$se, 2), ")")), 
+        p = c("", "p", "", scales::pvalue(coef.est.i$p[-1])), 
+        space = ""))
+    colnames(table.stat) = paste0("col", c(1:dim(table.stat)[2]))
+    
+    # Plot of residuals
+    plot.residuals.i = subset(df_gr, Species == sp[i]) %>%
+      dplyr::select(LLS, HT, Z, B, Site, Z.Classe) %>%
+      drop_na() %>%
+      mutate(residuals = resid(model.i), 
+             fit = exp(predict(model.i, newdata = .) - 1)) %>%
+      mutate(species = species.i) %>%
+      dplyr::select(Z, HT, fit, residuals) %>%
+      gather(key = var.exp, value = var.exp.value, Z, HT, fit) %>%
+      mutate(var.exp = paste0("x = ", var.exp)) %>%
+      ggplot(aes(x = var.exp.value, y = residuals)) + 
+      geom_point() + 
+      facet_wrap(~ var.exp, scales = "free") +
+      geom_hline(yintercept = 0) + 
+      geom_smooth() + 
+      ggtitle(species.i) + 
+      xlab("") + 
+      theme(panel.background = element_rect(color = "black", fill = "white"),
+            panel.grid = element_blank(), 
+            strip.background = element_blank())
     
     # Add to the final dataset
     if(i == 1){
@@ -111,7 +142,12 @@ plot_gr_elev = function(df_gr, dir.in){
       coef.est <- rbind(coef.est, coef.est.i)
     } 
     
+    # Add residual plot to the list
+    eval(parse(text = paste0("list.plot.residuals$", sp[i], " = plot.residuals.i")))
   }
+  
+  # Final residual plot
+  plot_residuals = plot_grid(plotlist = list.plot.residuals, ncol = 2, scale = 0.9)
   
   # Raw data to plot for temperature
   data.real.Z <- df_gr %>%
@@ -131,7 +167,7 @@ plot_gr_elev = function(df_gr, dir.in){
               fit.sd = sd(LLS, na.rm = TRUE), 
               n = n()) %>%
     mutate(label = paste0("(", n, ")")) %>%
-    filter(n > 9)
+    filter(n > 3)
   
   # Plot the predictions
   plot.prediction <- data.plot %>%
@@ -149,7 +185,7 @@ plot_gr_elev = function(df_gr, dir.in){
     facet_wrap(~ sp, nrow = 1) + 
     scale_color_manual(values = c("#335C67", "#9E2A2B")) +
     scale_fill_manual(values = c("#335C67", "#9E2A2B")) +
-    ylab("Last shoot\n length (cm)") + xlab("elevation (m)") +
+    ylab("Last shoot\n length (cm)") + xlab("Elevation (m)") +
     theme(panel.background = element_rect(fill = "white", color = "black"), 
           panel.grid = element_blank(), 
           axis.text.x = element_text(size = 5),
@@ -170,7 +206,7 @@ plot_gr_elev = function(df_gr, dir.in){
     scale_color_manual(values = c("black", "red")) +
     facet_wrap(~ sp, nrow = 1) + 
     geom_hline(yintercept = 0, linetype = "dashed") +
-    ylab("Effect on browsing probability") + xlab("") +
+    ylab("Effect on last shoot length") + xlab("") +
     coord_flip() +
     theme(panel.background = element_rect(fill = "white", color = "black"), 
           panel.grid = element_blank(), 
@@ -183,14 +219,16 @@ plot_gr_elev = function(df_gr, dir.in){
                         get_legend(plot.prediction + theme(legend.position = "left", legend.title = element_blank())), 
                         nrow = 1, rel_widths = c(1, 0.3))
   
-  # Save the plot
+  # Save the plots
   ggsave(file.fig.in, plot = plot.out, width = 18, height = 10, units = "cm", dpi = 600)
+  ggsave(file.fig.resid.in, plot = plot_residuals, width = 26, height = 13, units = "cm", dpi = 600)
   
   # Save the stat table
-  write.table(table.stat, file.table.in, row.names = F, col.names = F, quote = F)
+  write.table(table.stat, file.table.in, row.names = F, col.names = F, 
+              quote = F, sep = ";")
   
   # Return plot
-  return(c(file.fig.in, file.table.in))
+  return(c(file.fig.in, file.table.in, file.fig.resid.in))
 }
 
 
@@ -222,7 +260,7 @@ plot_br_elev = function(df_br, dir.in){
            HT.scaled = predict(lm(scale(HT) ~ HT, data = df_br), newdata = .))
   
   # Initialize the table with statistics 
-  table.stat = data.frame(col1 = "", col2 = "Estimate (se)", col3 = "p-value")
+  table.stat = data.frame(col1 = c("", "", "Int.", "Z", "Ht", "Z:Ht"))
   
   # Loop on all species
   for(i in 1:length(sp)){
@@ -279,12 +317,14 @@ plot_br_elev = function(df_br, dir.in){
     
     # Complete the stat table 
     table.stat = table.stat %>%
-      rbind(data.frame(
-        col1 = c("", "", "Int.", "Z", "Ht", "Z:Ht"), 
-        col2 = c("", species.i, paste0(round(coef.est.i$coef, 2), " (", 
+      cbind(data.frame(
+        est = c(species.i, "est (sd)", paste0(round(coef.est.i$coef, 2), " (", 
                                        round(coef.est.i$se, 2), ")")), 
-        col3 = c("", "", scales::pvalue(coef.est.i$p))
+        p = c("", "p", scales::pvalue(coef.est.i$p)), 
+        space = ""
       ))
+    colnames(table.stat) = paste0("col", c(1:dim(table.stat)[2]))
+    
     # Add to the final dataset
     if(i == 1){
       data.plot <- data.plot.i
@@ -349,7 +389,8 @@ plot_br_elev = function(df_br, dir.in){
   ggsave(file.fig.in, plot = plot.out, width = 18, height = 10, units = "cm", dpi = 600)
   
   # Save the stat table
-  write_on_disk(table.stat, file.table.in)
+  write.table(table.stat, file.table.in, row.names = F, col.names = F, 
+              quote = F, sep = ";")
   
   # Return plot
   return(c(file.fig.in, file.table.in))
@@ -371,18 +412,157 @@ plot_climate = function(df_br, map_per_plot, file.in){
   # Make the plot
   plot.out = df_br %>%
     dplyr::select(Site, Plot, Subplot, Z, Tmean) %>%
-    left_join((map_per_plot %>% select(Site, Plot, map)), 
+    left_join((map_per_plot %>% dplyr::select(Site, Plot, map)), 
               by = c("Site", "Plot")) %>%
     dplyr::select(-Subplot) %>%
     distinct() %>%
     ggplot(aes(x = Tmean, y = Z, fill = map)) + 
     geom_point(shape = 21, color = "black") +
-    facet_wrap(~ Site)
+    facet_wrap(~ Site) + 
+    theme(panel.background = element_rect(color = "black", fill = "white"),
+          panel.grid = element_blank(), 
+          strip.background = element_blank())
+  
+  # Save the plot
+  ggsave(file.in, plot = plot.out, width = 14, height = 9, units = "cm", 
+         dpi = 600)
+  
+  # Return file
+  return(file.in)
+}
+
+
+
+
+#' Function to plot the height distribution of seedlings
+#' @param df_br browsing data
+#' @param file.in Name of the file to save, including path
+plot_height = function(df_br, file.in){
+  
+  # Create directory if needed
+  create_dir_if_needed(file.in)
+  
+  # Make the plot
+  plot.out = plot.out = df_br %>%
+    group_by(Site, Plot, Species) %>%
+    mutate(n.seedlings = n()) %>% ungroup() %>%
+    mutate(n.seedlings.cat = ifelse(n.seedlings < 20, "no selection", "height selection")) %>%
+    dplyr::select(Site, Plot, Species, n.seedlings, n.seedlings.cat, HT) %>%
+    filter(HT <= 70) %>%
+    ggplot(aes(x = HT)) + 
+    geom_histogram(fill = "black", color = "white", bins = 10) + 
+    facet_grid(n.seedlings.cat ~ Species, scales = "free") + 
+    theme(panel.background = element_rect(color = "black", fill = "white"),
+          panel.grid = element_blank(), 
+          strip.background = element_blank())
+  
   
   # Save the plot
   ggsave(file.in, plot = plot.out, width = 14, height = 9, units = "cm", dpi = 600)
   
   # Return file
   return(file.in)
+}
+
+
+
+#' Plot the map of study sites with elevation
+#' @param df_br data set with coordinates of each site
+#' @param dir.in Name of the directly where to save files including path
+map_sites = function(df_br, dir.in){
+  
+  # Create output directory if needed
+  create_dir_if_needed(paste0(dir.in, "/test"))
+  
+  # Load country polygons
+  data_countries = ne_countries(scale = "medium", returnclass = "sf") %>%
+    filter(continent == "Europe" & sovereignt != "Russia") %>%
+    st_crop(xmin = -3,  xmax = 22, ymin = 41, ymax = 71)
+  
+  # Create data with study sites and coordinates
+  data = df_br %>%
+    group_by(Site) %>%
+    summarize(longitude = mean(X), 
+              latitude = mean(Y)) %>%
+    st_as_sf(coords = c("longitude", "latitude"), crs = 4326)
+  
+  # Divide in two datasets: one with only french sites, one with all sites
+  data_sf_fr = data %>% filter(Site %in% c("Chartreuse", "Vercors", "Belledonne"))
+  data_sf = data %>% mutate(Site = ifelse(Site %in% data_sf_fr$Site, NA_character_, Site))
+  
+  # Box around the french sites
+  # -- create box based on max coordinates
+  my_bbox <- c(xmin = 5, xmax = 6.5, ymin = 44.7, ymax = 45.8)
+  # -- Convert to a matrix
+  my_bbox_matrix <- 
+    matrix(c(my_bbox['xmin'], my_bbox['xmin'], my_bbox['xmax'], my_bbox['xmax'], my_bbox['xmin'],  
+             my_bbox['ymax'], my_bbox['ymin'], my_bbox['ymin'], my_bbox['ymax'], my_bbox['ymax']), 
+           ncol = 2)
+  # -- Convert to sf
+  my_bbox_sf <- st_geometry(st_polygon(x = list(my_bbox_matrix)))
+  st_crs(my_bbox_sf) <- 4326
+  
+  # Sample points in the map for elevation
+  # -- Generate points
+  country_points = st_sample(
+    data_countries, size = round(as.numeric(st_area(data_countries)/10000000), digits = 0), 
+    type = "random") 
+  # -- Get elevation for these points
+  country_points_elevation = get_elev_point(country_points, prj = crs(data_sf), src = "aws")
+  # -- Add top points dataset
+  country_points$elevation = as.numeric(country_points_elevation$elevation)
+  
+  # Same with french sites
+  # -- crop data_countries with the box
+  data_countries_fr = data_countries %>%
+    st_crop(my_bbox_sf)
+  # -- Generate points
+  country_points_fr = st_sample(
+    data_countries_fr, size = dim(country_points_elevation)[1], type = "random") 
+  # -- Get elevation for these points
+  country_points_elevation_fr = get_elev_point(country_points_fr, prj = crs(data_sf), src = "aws")
+  
+  # -- Plot all study sites
+  plot.all = data_countries %>%
+    ggplot(aes(geometry = geometry)) + 
+    geom_sf(data = country_points_elevation, inherit.aes = TRUE,
+            aes(color = elevation), size = 0.05, alpha = 0.5) +
+    scale_color_gradient(low = "white", high = "black") +
+    geom_sf(colour = 'black', alpha = .4, fill = NA) +
+    geom_sf(data = data_sf, shape = 21, color = "black", fill = "red") + 
+    geom_sf_text(data = data_sf, nudge_y = c(0.5, rep(-0.5, 6)), 
+                 aes(label = Site), inherit.aes = TRUE, 
+                 nudge_x = -2, color = "#BF0603") +
+    geom_sf(data = my_bbox_sf, fill = "#0077B6", color = "#03045E", alpha = 0.5) +
+    theme(panel.background = element_rect(color = 'black', fill = 'white'), 
+          panel.grid = element_blank(), 
+          legend.position = "none", 
+          axis.title = element_blank())
+  ggsave(paste(dir.in, "all.jpg", sep = "/"), plot.all, width = 9, height = 17, 
+         units = "cm", dpi = 600, bg = "white")
+  
+  # Plot french sites only
+  plot.fr = data_countries_fr %>%
+    ggplot(aes(geometry = geometry)) + 
+    geom_sf(data = country_points_elevation_fr, inherit.aes = TRUE,
+            aes(color = elevation), size = 0.05, alpha = 0.5) +
+    scale_color_gradient(low = "white", high = "black") +
+    geom_sf(colour = 'black', alpha = .4, fill = NA) +
+    geom_sf(data = data_sf_fr, shape = 21, color = "black", fill = "red") + 
+    geom_sf_text(data = data_sf_fr, aes(label = Site), inherit.aes = TRUE, 
+                 nudge_x = -0.2, nudge_y = c(0.06, 0.06, -0.06), 
+                 color = "#BF0603", hjust = 0) +
+    theme(panel.background = element_rect(color = '#03045E', fill = "#CAF0F8"), 
+          panel.grid = element_blank(), 
+          legend.position = "none", 
+          axis.title = element_blank(), 
+          axis.text = element_blank(), 
+          axis.ticks = element_blank())
+  ggsave(paste(dir.in, "fr.jpg", sep = "/"), plot.fr, width = 6, height = 6, 
+         units = "cm", dpi = 600, bg = "white")
+  
+  # Return the name of the files saved
+  return(paste0(dir.in, c("/all.jpg", "/fr.jpg")))
+  
 }
 
